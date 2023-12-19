@@ -7,7 +7,8 @@ from selenium.webdriver.chromium.options import ChromiumOptions
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException
+
 import csv
 
 MLX_BASE = "https://api.multilogin.com"
@@ -18,15 +19,14 @@ HEADERS = {
  'Content-Type': 'application/json'
  }
 
-#TODO: Insert your account information in both variables below.
-USERNAME = "arina.khatuntceva@multilogin.com"
-PASSWORD = "7327522Aa"
+# INFO TO PROVIDE TO SIGN IN AND START A PROFILE
+USERNAME = ""
+PASSWORD = ""
 
-#TODO: Insert the Folder ID and the Profile ID below 
-FOLDER_ID = "79b14e74-a29c-4a5d-b06e-37f7389066a7"
-PROFILE_ID = "ef2d6d2c-c672-4d7d-8f8d-c0786042a673"
+FOLDER_ID = ""
+PROFILE_ID = ""
 
-def signin() -> str:
+def signin():
     payload = {
         'email': USERNAME,
         'password': hashlib.md5(PASSWORD.encode()).hexdigest()
@@ -76,11 +76,7 @@ HEADERS.update({"Authorization": f'Bearer {token}'})
 driver = start_profile()
 driver.get('https://www.whois.com/whois/')
 
-info_file = "info.csv"
-# f = open(info_file, 'a', encoding = 'utf-8')
-# f.write('Expiration date, Phone number, Registration email')
-
-# ask the user info from which domain name is required
+# TYPE IN TO REQUEST INFO FROM THIS SPECIFIC DOMAIN
 domain_name = input("Domain name: ")
 
 driver.implicitly_wait(15)
@@ -92,18 +88,35 @@ btn_search = driver.find_element(By.XPATH, "/html/body/main/div[1]/div/form/div[
 btn_search.click()
 time.sleep(3)
 
-exp_date = driver.find_element(By.XPATH, "/html/body/div[1]/div[1]/main/div[3]/div[2]/div[5]/div[2]").text
+# GATHERING THE DATA
+exp_date = driver.find_elements(By.XPATH, "/html/body/div[1]/div[1]/main/div[3]/div[2]/div[5]/div[2]")
         
-reg_email = driver.find_element(By.XPATH, "/html/body/div[1]/div[1]/main/div[3]/div[3]/div[10]/div[2]").text
+reg_email = driver.find_elements(By.XPATH, "/html/body/div[1]/div[1]/main/div[3]/div[3]/div[10]/div[2]")
         
-owner_phone = driver.find_element(By.XPATH, "/html/body/div[1]/div[1]/main/div[3]/div[3]/div[9]/div[2]").text
-print(exp_date, reg_email, owner_phone)
+owner_phone = driver.find_elements(By.XPATH, "/html/body/div[1]/div[1]/main/div[3]/div[3]/div[9]/div[2]")
 
-# f.write('\n' + '{exp_date}' + ',' + '{owner_phone}' + ',' + '{reg_email}' + '\n')
+# IF THE DATA IS NOT PRESENT IN THE PAGE, IT WILL ASSIGN A STRING VALUE "Empty"
+if len(exp_date) == 0:
+    exp_date_value = 'Empty'
+else:
+    exp_date_value = exp_date[0].text
 
+if len(reg_email) == 0:
+    reg_email_value = 'Empty'
+else:
+    reg_email_value = reg_email[0].text
+
+if len(owner_phone) == 0:
+    owner_phone_value = 'Empty'
+else:
+    owner_phone_value = owner_phone[0].text
+
+# CREATING A CSV FILE AND SAVING THE DATA
+info_file = "info.csv"
 with open(info_file, 'a', newline='', encoding='utf-8') as csvfile:
     csvwriter = csv.writer(csvfile)
     csvwriter.writerow(['Expiration date', 'Phone number', 'Registration email'])
-    csvwriter.writerow([exp_date, owner_phone, reg_email])
+    csvwriter.writerow([exp_date_value.replace(",", "|"), owner_phone_value.replace(",", "|"), reg_email_value.replace(",", "|")])
 
-driver.quit()
+
+stop_profile()
